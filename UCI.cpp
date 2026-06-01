@@ -675,7 +675,7 @@ string Engine_Info() {
 	const string months("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec");
 	string month, day, year;
 	stringstream ss, date(__DATE__); // From compiler, format is "Sep 21 2008"
-	result += "Chess ";
+	result += "Bitterroot ";
 	date >> month >> day >> year;
 	result += "20" + year.substr(2) + (to_string((1 + months.find(month) / 4)).length() < 2 ? "0" + to_string((1 + months.find(month) / 4)) : to_string((1 + months.find(month) / 4))) + (day.length() < 2 ? "0" + day : day);
 
