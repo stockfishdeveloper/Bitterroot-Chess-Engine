@@ -144,12 +144,15 @@ int CheckUci() {
 			cin >> name;
 			string optionname = "";
 			cin >> optionname;
+			string valuestring = "";
+			cin >> valuestring;
+			string paramvalue = "";
+			cin >> paramvalue;
 			if (optionname == "TimePerMove") {
-				string value = "";
-				cin >> value;
-				int value2 = 0;
-				cin >> value2;
-				Time_Usage = value2;
+				Time_Usage = stoi(paramvalue);
+			}
+			else if (optionname == "MultiPV") {
+				MultiPV = stoi(paramvalue);
 			}
 		}
 		else if (UciCommand == "tb") {
@@ -684,7 +687,7 @@ string Engine_Info() {
 }
 void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int nodes, vector<LINE> PvLines) {
 	output.lock();
-	for (int i = 0; i < (PvLines.size() < 10 ? PvLines.size() : 10); i++) {
+	for (int i = 0; i < (PvLines.size() < MultiPV ? PvLines.size() : MultiPV); i++) {
 		cout << "info multipv " << i + 1 << " depth " << depth << " seldepth " << depth + seldepth << " score ";
 		Log << "info multipv " << i + 1 << " depth " << depth << " seldepth " << depth + seldepth << " score ";
 		if (PvLines[i].score == MATE) {
