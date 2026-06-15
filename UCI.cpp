@@ -719,8 +719,8 @@ void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int no
 		cout << " hashfull " << int((TT.count / 8388608.0) * 1000);
 		cout << " pv " << PvLines[i].Output();
 		Log << " pv " << PvLines[i].Output();
-		cout << "time " << time << " nodes " << nodes << " nps " << (1000 * (nodes / (time + 1))) << endl;
-		Log << "time " << time << " nodes " << nodes << " nps " << (1000 * (nodes / (time + 1))) << endl;
+		cout << "time " << time << " nodes " << nodes << " nps " << int(nodes / (float(time + 1) / 1000)) << endl;
+		Log << "time " << time << " nodes " << nodes << " nps " << int(nodes / (float(time + 1) / 1000)) << endl;
 	}
 	output.unlock();
 }
