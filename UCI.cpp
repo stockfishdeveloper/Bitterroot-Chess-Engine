@@ -23,7 +23,7 @@ ofstream Log("Log.txt");//For writing to a text file
 int wtime = 0;
 int btime = 0;
 int Time_Usage = 0;
-int MultiPV = 4;
+int MultiPV = 1;
 LINE PVline;
 
 int CheckUci() {
