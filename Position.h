@@ -56,6 +56,7 @@ public:
 	Bitboard EP_Square;
 	Bitboard Prev_EP_Square;
 	Move LegalMoves[100];
+	void Print();
 	Position();
 	~Position();
 	Position(Position* position);

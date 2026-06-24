@@ -35,6 +35,26 @@ void Move::Output() {
 			cout << PlayerMoves[i];
 	}
 }
+
+void Position::Print() {
+	cout << "White Pieces: " << White_Pieces << endl;
+	cout << "Black Pieces: " << Black_Pieces << endl;
+	cout << "White King: " << White_King << endl;
+	cout << "Black King: " << Black_King << endl;
+	cout << "White Queens: " << White_Queens << endl;
+	cout << "White Rooks: " << White_Rooks << endl;
+	cout << "White Bishops: " << White_Bishops << endl;
+	cout << "White Knights: " << White_Knights << endl;
+	cout << "White Pawns: " << White_Pawns << endl;
+	cout << "Black Queens: " << Black_Queens << endl;
+	cout << "Black Rooks: " << Black_Rooks << endl;
+	cout << "Black Bishops: " << Black_Bishops << endl;
+	cout << "Black Knights: " << Black_Knights << endl;
+	cout << "Black Pawns: " << Black_Pawns << endl;
+	cout << "En Passant Square: " << EP_Square << endl;
+	cout << "Previous En Passant Square: " << Prev_EP_Square << endl;
+}
+
 Position::Position() {
 	White_Pieces = 0;
 	Black_Pieces = 0;
