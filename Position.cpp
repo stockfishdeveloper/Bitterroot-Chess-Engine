@@ -53,6 +53,7 @@ void Position::Print() {
 	cout << "Black Pawns: " << Black_Pawns << endl;
 	cout << "En Passant Square: " << EP_Square << endl;
 	cout << "Previous En Passant Square: " << Prev_EP_Square << endl;
+	cout << "---------------------------" << endl;
 }
 
 Position::Position() {

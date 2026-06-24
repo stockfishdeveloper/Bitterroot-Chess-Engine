@@ -615,30 +615,6 @@ int Parse_Moves(string First, string Second, string PromotionType) {
 				assert(Captured != NONE);
 			}
 		}
-	if (pos.Current_Turn == true) {
-		if (((pos.Black_Pawns << 8) & To) && (From & 1095216660480) && (pos.White_Pawns & From) && (!(pos.Black_Pieces & To))) {
-			pos.Black_Pawns ^= (To >> 8);
-			pos.Black_Pieces ^= (To >> 8);
-			pos.White_Pawns |= To;
-			pos.White_Pawns ^= From;
-			pos.White_Pieces |= To;
-			pos.White_Pieces ^= From;
-			pos.Current_Turn ^= 1;
-			return 0;
-		}
-	}
-	else if (pos.Current_Turn == false) {
-		if (((pos.White_Pawns >> 8) & To) && (From & 4278190080) && (pos.Black_Pawns & From) && (!(pos.White_Pieces & To))) {
-			pos.White_Pawns ^= (To << 8);
-			pos.White_Pieces ^= (To << 8);
-			pos.Black_Pawns |= To;
-			pos.Black_Pawns ^= From;
-			pos.Black_Pieces |= To;
-			pos.Black_Pieces ^= From;
-			pos.Current_Turn ^= 1;
-			return 0;
-		}
-	}
 	if (p == WK) {
 		pos.WhiteCanCastleK = false;
 		pos.WhiteCanCastleQ = false;
