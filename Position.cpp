@@ -295,7 +295,7 @@ void Position::Make_Move(Move m) {
 	if ((m.From & 72057594037927936) || (m.To & 72057594037927936))
 		BlackCanCastleQ = false;
 
-	if ((m.From & 9223372036854775808) || (m.To & 9223372036854775808))
+	if ((m.From & 9223372036854775808ULL) || (m.To & 9223372036854775808ULL))
 		BlackCanCastleK = false;
 
 	Bitboard* bb = Get_Bitboard_From_Piece(m.P);

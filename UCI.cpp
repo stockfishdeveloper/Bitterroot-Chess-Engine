@@ -626,7 +626,7 @@ int Parse_Moves(string First, string Second, string PromotionType) {
 	if (p == WR && From == 1) pos.WhiteCanCastleQ = false;
 	if (p == WR && From == 128) pos.WhiteCanCastleK = false;
 	if (p == BR && From == 72057594037927936) pos.BlackCanCastleQ = false;
-	if (p == BR && From == 9223372036854775808) pos.BlackCanCastleK = false;
+	if (p == BR && From == 9223372036854775808ULL) pos.BlackCanCastleK = false;
 
 	// THIS NEEDS TO BE CHECKED
 	// We need to check if this is an en passant move
