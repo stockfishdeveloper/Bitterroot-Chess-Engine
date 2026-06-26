@@ -33,7 +33,7 @@ Bitboard Get_Current_Hash_Key(Position* position) {
 	key ^= position->Black_Queens;
 	key ^= position->Black_King;
 
-	key ^= position->Current_Turn;
+	key ^= int(position->Current_Turn);
 
 	return key;
 }
