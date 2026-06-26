@@ -6,6 +6,10 @@
 #endif
 #include <assert.h>
 
+#define WIN32_LEAN_AND_MEAN
+#define NOKERNEL
+#define NOSERVICE
+
 //#include "TBINDEX.h"
 // SMP stuff
 

@@ -2,6 +2,7 @@
 #define Position_H_
 #include <vector>
 #include <algorithm>
+#include <intrin.h>
 #include "Bitboard.h"
 
 enum Piece {

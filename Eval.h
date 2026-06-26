@@ -1,5 +1,6 @@
 #ifndef _Eval_H_Included_
 #define _Eval_H_Included_
+#include <intrin.h>
 #include "Position.h"
 
 namespace Eval {

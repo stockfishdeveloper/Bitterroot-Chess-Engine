@@ -2,6 +2,7 @@
 #include "UCI.h"
 #include <limits>
 #include <thread> //For multithreading--must be using C++11 compiler
+#include <intrin.h>
 #include "Thread.h"//Threading header file
 #include "Search.h"
 #include "Perft.h"

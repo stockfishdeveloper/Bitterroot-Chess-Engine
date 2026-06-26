@@ -1,6 +1,7 @@
 #ifndef Make_Move_H_Included
 #define Make_Move_H_Included
 #include <iostream>
+#include <intrin.h>
 #include "Bitboard.h"
 #include "Position.h"
 
