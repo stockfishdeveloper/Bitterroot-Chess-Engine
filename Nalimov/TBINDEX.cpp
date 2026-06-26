@@ -272,7 +272,7 @@ static void* PvMalloc
 
 	pv = malloc(cb);
 	if (NULL == pv) {
-		printf("*** Cannot allocate %d bytes of memory\n", cb);
+		printf("*** Cannot allocate %zu bytes of memory\n", cb);
 		exit(1);
 	}
 	cbAllocated += cb;
@@ -2193,28 +2193,28 @@ public:
 
 static const INDEX sptriv[] =
 {
- 0,  1,  2,  3, -1, -1, -1, -1,
--1,  4,  5,  6, -1, -1, -1, -1,
--1, -1,  7,  8, -1, -1, -1, -1,
--1, -1, -1,  9, -1, -1, -1, -1,
--1, -1, -1, -1, -1, -1, -1, -1,
--1, -1, -1, -1, -1, -1, -1, -1,
--1, -1, -1, -1, -1, -1, -1, -1,
--1, -1, -1, -1, -1, -1, -1, -1,
+ static_cast<INDEX>(0),  static_cast<INDEX>(1),  static_cast<INDEX>(2),  static_cast<INDEX>(3), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1),  static_cast<INDEX>(4),  static_cast<INDEX>(5),  static_cast<INDEX>(6), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1),  static_cast<INDEX>(7),  static_cast<INDEX>(8), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),  static_cast<INDEX>(9), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
 };
 
 /* scanning pattern: queenside flank encoding */
 
 static const INDEX spqsfv[] =
 {
- 0,  1,  2,  3, -1, -1, -1, -1,
- 4,  5,  6,  7, -1, -1, -1, -1,
- 8,  9, 10, 11, -1, -1, -1, -1,
-12, 13, 14, 15, -1, -1, -1, -1,
-16, 17, 18, 19, -1, -1, -1, -1,
-20, 21, 22, 23, -1, -1, -1, -1,
-24, 25, 26, 27, -1, -1, -1, -1,
-28, 29, 30, 31, -1, -1, -1, -1,
+ static_cast<INDEX>(0),  static_cast<INDEX>(1),  static_cast<INDEX>(2),  static_cast<INDEX>(3), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+ static_cast<INDEX>(4),  static_cast<INDEX>(5),  static_cast<INDEX>(6),  static_cast<INDEX>(7), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+ static_cast<INDEX>(8),  static_cast<INDEX>(9), static_cast<INDEX>(10), static_cast<INDEX>(11), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(12), static_cast<INDEX>(13), static_cast<INDEX>(14), static_cast<INDEX>(15), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(16), static_cast<INDEX>(17), static_cast<INDEX>(18), static_cast<INDEX>(19), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(20), static_cast<INDEX>(21), static_cast<INDEX>(22), static_cast<INDEX>(23), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(24), static_cast<INDEX>(25), static_cast<INDEX>(26), static_cast<INDEX>(27), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
+static_cast<INDEX>(28), static_cast<INDEX>(29), static_cast<INDEX>(30), static_cast<INDEX>(31), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1), static_cast<INDEX>(-1),
 };
 
 /*--> CalcIndex3A: calculate index, mode 3A */
