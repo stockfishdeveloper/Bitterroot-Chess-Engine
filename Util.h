@@ -17,13 +17,16 @@ const char LSB_64_table[154] =
 #undef __
 };
 
+const Bitboard debruijn64 = 0x03f79d71b4cb0a89;
+
+#define lsb(bb) (LSB_64_table[((bb ^ (bb - 1)) * debruijn64) >> 58])
+
 enum Movetype {
 	Capture, Promotion, Normal
 };
 
 void Benchmark();
 void Display_Move(Move m);
-int lsb(Bitboard b);
 Movetype Get_Move_Type(Move& m);
 Bitboard Unconvert_Int(const int& number);
 #endif

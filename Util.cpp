@@ -1,11 +1,6 @@
 #include "Util.h"
 #include "Uci.h"
 
-int lsb(Bitboard bb) {
-	if (bb == 0) return 0;
-	const Bitboard debruijn64 = 0x03f79d71b4cb0a89;
-	return LSB_64_table[((bb ^ (bb - 1)) * debruijn64) >> 58];
-}
 Movetype Get_Move_Type(Move& m) {
 	if (m.Promotion)
 		return Promotion;
