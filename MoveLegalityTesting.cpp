@@ -99,8 +99,7 @@ bool Black_Is_Legal(Position& position, Move move) {
 		return false;
 	}
 
-	Bitboard QAttacks = BAttacks | RAttacks;
-	if (QAttacks & (position.White_Queens)) {
+	if ((BAttacks | RAttacks) & (position.White_Queens)) {
 		position.Undo_Move(move);
 		return false;
 	}

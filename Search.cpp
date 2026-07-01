@@ -185,7 +185,7 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		//position.LegalMoves[i].Score += Eval::EvalPSQTResult(&position, position.LegalMoves[i]); //SEEMED TO BE WORTH A LOT OF ELO--Sucks a lot of NPS
 		moves.push_back(position.LegalMoves[i]);
 	}
-	std::sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs) { return lhs.Score > rhs.Score; });
+	std::stable_sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs) { return lhs.Score > rhs.Score; });
 	/*for(int i = 0; i < moves.size(); i++)
 	{
 		Log << i << " " << moves[i].Score << (moves[i].Score >= 1000 ? " tt move" : "") << (moves[i].Promotion  ? " promotion" : "");
