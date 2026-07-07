@@ -12,6 +12,7 @@ using namespace std;
 #include "Thread.h"
 #include "Util.h"
 #include "CounterMove.h"
+#include "TimeUsage.h"
 
 int Search::Time_Allocation = 0;
 bool Search::Searching = false;
@@ -97,7 +98,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 			memcpy(TempLine.argmove + 1, line.argmove, line.cmove * sizeof(Move));
 			pvlines.push_back(TempLine);
 
-			if ((timer.Get_Time() >= (Search::Time_Allocation / 30)) && q > 4) {
+			if (Should_Stop_Searching_Now(timer.Get_Time(), Search::Time_Allocation, (pos.Current_Turn ? winc : binc), q)) {
 				Search::STOP_SEARCHING_NOW = true;
 				return Best;
 			}
