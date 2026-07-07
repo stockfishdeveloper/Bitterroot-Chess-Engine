@@ -158,6 +158,7 @@
     <ClCompile Include="..\Position.cpp" />
     <ClCompile Include="..\Search.cpp" />
     <ClCompile Include="..\Thread.cpp" />
+    <ClCompile Include="..\TimeUsage.cpp" />
     <ClCompile Include="..\TransTable.cpp" />
     <ClCompile Include="..\UCI.cpp" />
     <ClCompile Include="..\Util.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="..\Position.h" />
     <ClInclude Include="..\Search.h" />
     <ClInclude Include="..\Thread.h" />
+    <ClInclude Include="..\TimeUsage.h" />
     <ClInclude Include="..\TransTable.h" />
     <ClInclude Include="..\UCI.h" />
     <ClInclude Include="..\Util.h" />
