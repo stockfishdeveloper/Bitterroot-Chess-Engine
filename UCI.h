@@ -15,6 +15,7 @@ extern int Time_Usage;
 extern int MultiPV;
 extern Bitboard Current_Rank;
 extern string UciCommand;
+extern string NalimovPath;
 extern LINE PVline;
 extern ofstream Log;
 

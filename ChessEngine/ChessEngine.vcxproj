@@ -157,6 +157,7 @@
     <ClCompile Include="..\Perft.cpp" />
     <ClCompile Include="..\Position.cpp" />
     <ClCompile Include="..\Search.cpp" />
+    <ClCompile Include="..\Tablebase.cpp" />
     <ClCompile Include="..\Thread.cpp" />
     <ClCompile Include="..\TimeUsage.cpp" />
     <ClCompile Include="..\TransTable.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="..\Perft.h" />
     <ClInclude Include="..\Position.h" />
     <ClInclude Include="..\Search.h" />
+    <ClInclude Include="..\Tablebase.h" />
     <ClInclude Include="..\Thread.h" />
     <ClInclude Include="..\TimeUsage.h" />
     <ClInclude Include="..\TransTable.h" />

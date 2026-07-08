@@ -91,7 +91,7 @@ typedef	int	piece;
 #endif
 
 #if !defined (SqFind2)
-#define	SqFind2(psq,pi1,sq1,pi2,sq2)	sq1=SqFindFirst(psq,pi1);sq2=SqFindFirst(psq,pi2);
+#define	SqFind2(psq,pi1,sq1,pi2,sq2)	sq1=SqFindFirst(psq,pi1);sq2=SqFindSecond(psq,pi2);
 #endif
 
 // Machine and compiler-specific declarations
@@ -3069,6 +3069,8 @@ static CUTbReference rgutbReference[MAX_NON_KINGS + 2];
 // Global decompression block buffer for .emd files
 static decode_block* rgpdbDecodeBlock = NULL;
 static unsigned char* rgpbDecompressedData = NULL; // Buffer for decompressed data
+static int rgcbDecodeBlockAlloc = 0;    // comp_block_size the decode block was allocated for
+static int rgcbDecompressedAlloc = 0;   // size of rgpbDecompressedData in bytes
 #define TB_CB_CACHE_CHUNK 65536  // Size of decompression buffer
 #define LOG2_TB_CB_CACHE_CHUNK 16 // log2(65536) = 16
 
@@ -3423,6 +3425,8 @@ void VTbCloseFiles(void) {
 		free(rgpdbDecodeBlock);
 		rgpdbDecodeBlock = NULL;
 	}
+	rgcbDecodeBlockAlloc = 0;
+	rgcbDecompressedAlloc = 0;
 
 	// Reset block cache
 	lastDecompressedBlock.iTb = -1;
@@ -3654,8 +3658,9 @@ static int TbtProbeCompressed
 	offsetInBlock = (int)(indOffset % pdi->block_size);
 
 	// Check if block number is valid
-	if (blockNum >= pdi->n_blk)
+	if (blockNum >= pdi->n_blk) {
 		return bev_broken;
+	}
 
 	// Check if we have this block cached
 	if (lastDecompressedBlock.iTb == iTb && 
@@ -3668,18 +3673,42 @@ static int TbtProbeCompressed
 		return (tb_t)lastDecompressedBlock.data[offsetInBlock];
 	}
 
-	// Allocate decompression block if needed
-	if (NULL == rgpdbDecodeBlock) {
+	// (Re)allocate the decode block if this tablebase's compressed blocks are
+	// larger than what we allocated for. The buffers are shared across all
+	// tablebases, which have different block sizes, so we must grow on demand;
+	// otherwise comp_read_block/comp_decode overrun the buffer and corrupt the
+	// heap (a state-dependent crash).
+	if (NULL == rgpdbDecodeBlock || pdi->comp_block_size > rgcbDecodeBlockAlloc) {
+		if (NULL != rgpdbDecodeBlock) {
+			free(rgpdbDecodeBlock);
+			rgpdbDecodeBlock = NULL;
+		}
 		result = comp_alloc_block(&rgpdbDecodeBlock, pdi->comp_block_size);
-		if (0 != result)
+		if (0 != result) {
+			rgcbDecodeBlockAlloc = 0;
 			return bev_broken;
+		}
+		rgcbDecodeBlockAlloc = pdi->comp_block_size;
+		lastDecompressedBlock.iTb = -1;  // cached pointer is now stale
 	}
 
-	// Allocate decompressed data buffer if needed
-	if (NULL == rgpbDecompressedData) {
-		rgpbDecompressedData = (unsigned char*)malloc(TB_CB_CACHE_CHUNK);
-		if (NULL == rgpbDecompressedData)
+	// (Re)allocate the decompressed data buffer if this tablebase's uncompressed
+	// block size exceeds the current buffer.
+	if (NULL == rgpbDecompressedData || pdi->block_size > rgcbDecompressedAlloc) {
+		if (NULL != rgpbDecompressedData) {
+			free(rgpbDecompressedData);
+			rgpbDecompressedData = NULL;
+		}
+		int want = pdi->block_size;
+		if (want < TB_CB_CACHE_CHUNK)
+			want = TB_CB_CACHE_CHUNK;
+		rgpbDecompressedData = (unsigned char*)malloc(want);
+		if (NULL == rgpbDecompressedData) {
+			rgcbDecompressedAlloc = 0;
 			return bev_broken;
+		}
+		rgcbDecompressedAlloc = want;
+		lastDecompressedBlock.iTb = -1;  // cached pointer is now stale
 	}
 
 	// Set the decompressed data buffer in the decode block
@@ -3714,8 +3743,9 @@ static int TbtProbeCompressed
 	UnLock(ptbd->m_rglockFiles[side]);
 
 	// Extract the value from the decompressed block
-	if (offsetInBlock >= rgpdbDecodeBlock->b.total)
+	if (offsetInBlock >= rgpdbDecodeBlock->b.total) {
 		return bev_broken;
+	}
 
 	// Cache this block for future use
 	lastDecompressedBlock.iTb = iTb;
