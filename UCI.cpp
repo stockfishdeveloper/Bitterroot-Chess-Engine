@@ -131,6 +131,7 @@ int CheckUci() {
 			string a = " ";
 			for (int i = 0; i < 5; i++) {
 				cin >> a;
+				Log << ">> " << a << endl;
 				if (i != 4)
 					a += " ";
 				temp += a;
@@ -145,12 +146,16 @@ int CheckUci() {
 		else if (UciCommand == "setoption") {
 			string name = "";
 			cin >> name;
+			Log << ">> " << name << endl;
 			string optionname = "";
 			cin >> optionname;
+			Log << ">> " << optionname << endl;
 			string valuestring = "";
 			cin >> valuestring;
+			Log << ">> " << valuestring << endl;
 			string paramvalue = "";
 			cin >> paramvalue;
+			Log << ">> " << paramvalue << endl;
 			if (optionname == "TimePerMove") {
 				Time_Usage = stoi(paramvalue);
 			}
@@ -264,7 +269,7 @@ int CheckUci() {
 			else {
 				cin >> wtime >> time_left_black >> btime;
 			}
-			Log << ">> " << time_left_white << " >> " << wtime << " >> " << time_left_black << " >> " << btime << endl;
+			Log << ">> " << time_left_white << " " << wtime << " " << time_left_black << " " << btime << endl;
 			if ((time_left_white == "btime") || (time_left_black == "wtime")) {
 				int w = wtime;
 				wtime = btime;
@@ -334,7 +339,7 @@ int Parse_Fen(string Fen) {
 	}
 	Current_Rank = 72057594037927936;
 	string Curr_Turn = hold[1];
-	Log << Curr_Turn << endl;
+
 	if (Curr_Turn.find("w") != string::npos) {
 		pos.Current_Turn = true;
 	}
@@ -342,7 +347,6 @@ int Parse_Fen(string Fen) {
 		pos.Current_Turn = false;
 	}
 	string Legal_Castling = hold[2];
-	Log << Legal_Castling << endl;
 	pos.WhiteCanCastleK = false;
 	pos.BlackCanCastleK = false;
 	pos.WhiteCanCastleQ = false;
@@ -491,11 +495,12 @@ int Moves_Command() {
 	char First_Part[5];
 	char Second_Part[5];
 	string Promotion_Type;
+	Log << ">> ";
 	while (true) {
 		Move m;
 		cin.get();
 		cin.get(First_Part, 3);
-		Log << ">> " << First_Part;
+
 		string F = "go";
 		if (First_Part == F) {
 			cin.putback('o');
@@ -538,8 +543,9 @@ int Moves_Command() {
 			cin.putback('s');
 			return 0;
 		}
+		Log << First_Part;
 		cin.get(Second_Part, 3);
-		Log << Second_Part << endl;
+		Log << Second_Part;
 		string a8 = "a8";
 		string b8 = "b8";
 		string c8 = "c8";
@@ -586,12 +592,16 @@ int Moves_Command() {
 		}
 		if (((T_o & Eigth_Rank_White) && (Fr & Seventh_Rank_White) && (Fr & pos.White_Pawns)) || ((T_o & Eigth_Rank_Black) && (Fr & Seventh_Rank_Black) && (Fr & pos.Black_Pawns))) {
 			cin >> Promotion_Type;
-			Log << Promotion_Type << endl;
+			Log << Promotion_Type << " ";
 			Parse_Moves(First_Part, Second_Part, Promotion_Type);
 		}
-		else
+		else {
+			Log << " ";
 			Parse_Moves(First_Part, Second_Part);
+		}
 	}
+
+	Log << endl;
 
 	return 0;
 }
@@ -748,7 +758,7 @@ void GoCommand() {
 	for (int h = 0; h < 64; h++) {
 		if (GeneralBoard[h] & blank.From) {
 			cout << "bestmove " << PlayerMoves[h];
-			Log << "<< bestmove " << PlayerMoves[h];
+			Log << "bestmove " << PlayerMoves[h];
 		}
 	}
 	for (int h = 0; h < 64; h++) {
@@ -763,8 +773,10 @@ void GoCommand() {
 				cout << "q" << endl;
 				Log << "q" << endl;
 			}
-			else
+			else {
 				cout << endl;
+				Log << endl;
+			}
 		}
 	}
 
