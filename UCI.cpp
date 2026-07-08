@@ -23,6 +23,8 @@ Bitboard Current_Rank = 72057594037927936;
 ofstream Log("Log.txt");//For writing to a text file
 int wtime = 0;
 int btime = 0;
+int winc = 0;
+int binc = 0;
 int Time_Usage = 0;
 int MultiPV = 1;
 LINE PVline;
@@ -234,6 +236,21 @@ int CheckUci() {
 			cout << "Index " << tbindex << endl;
 			cout << "Score is " << TbtProbeTable(tbid, 1, tbindex) << endl;
 		}
+
+		else if (UciCommand == "winc") {
+			string white_inc = "";
+			cin >> white_inc;
+
+			winc = stoi(white_inc);
+		}
+
+		else if (UciCommand == "binc") {
+			string black_inc = "";
+			cin >> black_inc;
+
+			binc = stoi(black_inc);
+		}
+
 		else if (UciCommand == "go") {
 			// we need to take these inputs here so they don't get consumed and then GoCommand() is left waiting for input
 			string time_left_white = "";
@@ -724,9 +741,8 @@ void GoCommand() {
 	Search::Searching = true;
 	Search::Time_Allocation = 10000;
 	timer.Start_Clock();
-	int h = 0, j = 0;
 	Move blank;
-	blank = Search::Think(wtime, btime, h, j);
+	blank = Search::Think(wtime, btime, winc, binc);
 	Search::Searching = false;
 
 	for (int h = 0; h < 64; h++) {
