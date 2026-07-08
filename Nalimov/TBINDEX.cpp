@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #define WIN32_LEAN_AND_MEAN
+#define NEW
 #define NOKERNEL
 #define NOSERVICE
 
@@ -49,11 +50,11 @@ square SqFindPiece
 	return 0;
 }
 
-#define SqFindKing(psq)                 0
-#define SqFindOne(psq,pi)               0
-#define SqFindFirst(psq,pi)             0
-#define SqFindSecond(psq,pi)    0
-#define SqFindThird(psq,pi)             0
+#define SqFindKing(psq)                 ((psq)[0])
+#define SqFindOne(psq,pi)               ((psq)[1])
+#define SqFindFirst(psq,pi)             ((psq)[1])
+#define SqFindSecond(psq,pi)    ((psq)[2])
+#define SqFindThird(psq,pi)             ((psq)[3])
 
 #define ILLEGAL_POSSIBLE
 #define T41_INCLUDE
@@ -70,6 +71,12 @@ typedef	int	color;
 #define	x_colorNeutral	2
 #define COLOR_DECLARED
 #endif
+
+// Include decompression support for .emd files
+#include "tbdecode.h"
+
+// Define the global variable for decompression memory tracking
+int cbEGTBCompBytes = 0;
 
 #if !defined (PIECES_DECLARED)
 typedef	int	piece;
@@ -251,8 +258,10 @@ static const square rgsqReflectInvertMask[] = { 0, 0x38 };
 
 #if defined (NEW)
 #define	PchExt(side) ((x_colorWhite == side) ? ".nbw" : ".nbb")
+#define	PchExtEmd(side) ((x_colorWhite == side) ? ".nbw.emd" : ".nbb.emd")
 #else
 #define	PchExt(side) ((x_colorWhite == side) ? ".tbw" : ".tbb")
+#define	PchExtEmd(side) ((x_colorWhite == side) ? ".tbw.emd" : ".tbb.emd")
 #endif
 
 // Verbose levels
@@ -2865,6 +2874,8 @@ typedef struct		// Hungarian: tbd
 	FILE* m_rgfpFiles[2];
 	CTbCacheBucket* m_prgtbcbBuckets[2];	// Cached file chunks in LRU order
 	BYTE* m_rgpbRead[2];
+	decode_info* m_rgpdiDecodeInfo[2];     // Decompression info for .emd files
+	bool			m_rgfCompressed[2];        // Is this file compressed?
 }
 CTbDesc;
 
@@ -3054,6 +3065,21 @@ union CUTbReference		// Hungarian: utbr
 //	Root of the search tree
 
 static CUTbReference rgutbReference[MAX_NON_KINGS + 2];
+
+// Global decompression block buffer for .emd files
+static decode_block* rgpdbDecodeBlock = NULL;
+static unsigned char* rgpbDecompressedData = NULL; // Buffer for decompressed data
+#define TB_CB_CACHE_CHUNK 65536  // Size of decompression buffer
+#define LOG2_TB_CB_CACHE_CHUNK 16 // log2(65536) = 16
+
+// Cache for last decompressed block to avoid repeated decompression
+static struct {
+	int iTb;
+	int side;
+	int blockNum;
+	unsigned char* data;
+	int dataSize;
+} lastDecompressedBlock = { -1, -1, -1, NULL, 0 };
 
 // Convert TB name (e.g. KQKR) into set of counters
 
@@ -3387,6 +3413,23 @@ void VTbCloseFiles(void) {
 		VTbCloseFile(iTb, x_colorWhite);
 		VTbCloseFile(iTb, x_colorBlack);
 	}
+
+	// Clean up decompression buffers
+	if (NULL != rgpbDecompressedData) {
+		free(rgpbDecompressedData);
+		rgpbDecompressedData = NULL;
+	}
+	if (NULL != rgpdbDecodeBlock) {
+		free(rgpdbDecodeBlock);
+		rgpdbDecodeBlock = NULL;
+	}
+
+	// Reset block cache
+	lastDecompressedBlock.iTb = -1;
+	lastDecompressedBlock.side = -1;
+	lastDecompressedBlock.blockNum = -1;
+	lastDecompressedBlock.data = NULL;
+	lastDecompressedBlock.dataSize = 0;
 }
 
 void VTbClearCache(void) {
@@ -3589,6 +3632,101 @@ int FUnMapTableFromMemory
 
 #endif
 
+// Helper function to probe compressed (.emd) tablebases
+static int TbtProbeCompressed
+(
+	int		iTb,
+	int		side,
+	unsigned long	indOffset
+) {
+	CTbDesc* ptbd = &rgtbdDesc[iTb];
+	decode_info* pdi = ptbd->m_rgpdiDecodeInfo[side];
+	FILE* fp;
+	int result;
+	int blockNum;
+	int offsetInBlock;
+
+	if (NULL == pdi)
+		return bev_broken;
+
+	// Calculate which block contains this offset
+	blockNum = (int)(indOffset / pdi->block_size);
+	offsetInBlock = (int)(indOffset % pdi->block_size);
+
+	// Check if block number is valid
+	if (blockNum >= pdi->n_blk)
+		return bev_broken;
+
+	// Check if we have this block cached
+	if (lastDecompressedBlock.iTb == iTb && 
+		lastDecompressedBlock.side == side && 
+		lastDecompressedBlock.blockNum == blockNum &&
+		lastDecompressedBlock.data != NULL) {
+		// Use cached block
+		if (offsetInBlock >= lastDecompressedBlock.dataSize)
+			return bev_broken;
+		return (tb_t)lastDecompressedBlock.data[offsetInBlock];
+	}
+
+	// Allocate decompression block if needed
+	if (NULL == rgpdbDecodeBlock) {
+		result = comp_alloc_block(&rgpdbDecodeBlock, pdi->comp_block_size);
+		if (0 != result)
+			return bev_broken;
+	}
+
+	// Allocate decompressed data buffer if needed
+	if (NULL == rgpbDecompressedData) {
+		rgpbDecompressedData = (unsigned char*)malloc(TB_CB_CACHE_CHUNK);
+		if (NULL == rgpbDecompressedData)
+			return bev_broken;
+	}
+
+	// Set the decompressed data buffer in the decode block
+	rgpdbDecodeBlock->orig.first = rgpbDecompressedData;
+
+	// Open the file if needed
+	Lock(ptbd->m_rglockFiles[side]);
+	fp = ptbd->m_rgfpFiles[side];
+	if (NULL == fp) {
+		fp = fopen(ptbd->m_rgpchFileName[side], "rb");
+		if (NULL == fp) {
+			UnLock(ptbd->m_rglockFiles[side]);
+			return bev_broken;
+		}
+		ptbd->m_rgfpFiles[side] = fp;
+	}
+
+	// Read and decompress the block
+	result = comp_read_block(rgpdbDecodeBlock, pdi, fp, blockNum);
+	if (0 != result) {
+		UnLock(ptbd->m_rglockFiles[side]);
+		return bev_broken;
+	}
+
+	// Decode the entire block (n = block size means decode all)
+	result = comp_decode_and_check_crc(rgpdbDecodeBlock, pdi, rgpdbDecodeBlock->orig.size, 0);
+	if (0 != result) {
+		UnLock(ptbd->m_rglockFiles[side]);
+		return bev_broken;
+	}
+
+	UnLock(ptbd->m_rglockFiles[side]);
+
+	// Extract the value from the decompressed block
+	if (offsetInBlock >= rgpdbDecodeBlock->b.total)
+		return bev_broken;
+
+	// Cache this block for future use
+	lastDecompressedBlock.iTb = iTb;
+	lastDecompressedBlock.side = side;
+	lastDecompressedBlock.blockNum = blockNum;
+	lastDecompressedBlock.data = rgpdbDecodeBlock->b.ptr;
+	lastDecompressedBlock.dataSize = rgpdbDecodeBlock->b.total;
+
+	return (tb_t)rgpdbDecodeBlock->b.ptr[offsetInBlock];
+}
+
 // Probe TB
 
 int TbtProbeTable
@@ -3609,6 +3747,10 @@ int TbtProbeTable
 	// If we know TB size, it's better for offset be smaller
 	assert(!FRegistered(iTb, side) || indOffset < ptbd->m_rgcbLength[side]);
 #endif
+
+	// Check if this is a compressed file
+	if (ptbd->m_rgfCompressed[side])
+		return TbtProbeCompressed(iTb, side, indOffset);
 
 	// Entire file read/mapped to memory?
 	if (NULL != ptbd->m_rgpbRead[side])
@@ -3878,13 +4020,16 @@ int FCheckExistance
 	FILE* fp;
 	char* pchCopy;
 	const char* pchExt = PchExt(side);
+	const char* pchExtEmd = PchExtEmd(side);
 	char			rgchTbName[256];
 	CTbCacheBucket* prgtbcbBuckets;
 	INDEX			cb;
+	bool			fIsEmd = false;
 
 	if (FRegistered(iTb, side) || NULL != rgtbdDesc[iTb].m_rgpbRead[side])
 		return true;
 
+	// First try to open with .emd extension
 	strcpy(rgchTbName, pszPath);
 	if (0 != pszPath[0]) {
 #if defined (_WIN32)
@@ -3894,31 +4039,78 @@ int FCheckExistance
 #endif
 	}
 	strcat(rgchTbName, rgtbdDesc[iTb].m_rgchName);
-	strcat(rgchTbName, pchExt);
+	strcat(rgchTbName, pchExtEmd);
 	fp = fopen(rgchTbName, "rb");
-#if !defined (NEW) && !defined (_WIN32)
-	// For case-sensitive systems, have to try once more
-	if (NULL == fp) {
-		for (int i = strchr(rgchTbName, '.') - rgchTbName - 1; i >= 0 && isalpha(rgchTbName[i]); i--)
-			rgchTbName[i] = toupper(rgchTbName[i]);
-		fp = fopen(rgchTbName, "rb");
+
+	if (NULL != fp) {
+		fIsEmd = true;
 	}
+	else {
+		// Try without .emd extension
+		strcpy(rgchTbName, pszPath);
+		if (0 != pszPath[0]) {
+#if defined (_WIN32)
+			strcat(rgchTbName, "\\");
+#else	// UNDONE: What do with MAC?
+			strcat(rgchTbName, "/");
 #endif
+		}
+		strcat(rgchTbName, rgtbdDesc[iTb].m_rgchName);
+		strcat(rgchTbName, pchExt);
+		fp = fopen(rgchTbName, "rb");
+#if !defined (NEW) && !defined (_WIN32)
+		// For case-sensitive systems, have to try once more
+		if (NULL == fp) {
+			for (int i = strchr(rgchTbName, '.') - rgchTbName - 1; i >= 0 && isalpha(rgchTbName[i]); i--)
+				rgchTbName[i] = toupper(rgchTbName[i]);
+			fp = fopen(rgchTbName, "rb");
+		}
+#endif
+	}
+
 	if (NULL == fp)
 		return false;
-	if (0 != fseek(fp, 0L, SEEK_END)) {
-		printf("*** Seek in %s failed\n", rgchTbName);
-		exit(1);
+
+	// Handle .emd compressed files
+	if (fIsEmd) {
+		decode_info* pdi = NULL;
+		int result = comp_open_file(&pdi, fp, 1);  // 1 = check CRC
+		if (0 != result) {
+			printf("*** Unable to open compressed file %s: error code %d\n", rgchTbName, result);
+			fclose(fp);
+			return false;
+		}
+		// Store the decompression info
+		rgtbdDesc[iTb].m_rgpdiDecodeInfo[side] = pdi;
+		rgtbdDesc[iTb].m_rgfCompressed[side] = true;
+		// Get the uncompressed size
+		cb = (INDEX)(pdi->block_size) * (pdi->n_blk - 1) + pdi->last_block_size;
+		rgtbdDesc[iTb].m_rgcbLength[side] = cb;
+		fclose(fp);
+
+		if (fVerbose)
+			printf("Compressed tablebase: %d blocks, %lu bytes uncompressed\n", pdi->n_blk, (unsigned long)cb);
 	}
-	cb = (INDEX)ftell(fp);
+	else {
+		// Uncompressed file
+		if (0 != fseek(fp, 0L, SEEK_END)) {
+			printf("*** Seek in %s failed\n", rgchTbName);
+			exit(1);
+		}
+		cb = (INDEX)ftell(fp);
 #if defined (NEW)
-	if (0 != rgtbdDesc[iTb].m_rgcbLength[side] && cb != rgtbdDesc[iTb].m_rgcbLength[side]) {
-		printf("*** %s corrupted\n", rgchTbName);
-		exit(1);
-	}
+		if (0 != rgtbdDesc[iTb].m_rgcbLength[side] && cb != rgtbdDesc[iTb].m_rgcbLength[side]) {
+			printf("*** %s corrupted (expected %lu bytes, got %lu bytes)\n", 
+				rgchTbName, (unsigned long)rgtbdDesc[iTb].m_rgcbLength[side], (unsigned long)cb);
+			exit(1);
+		}
 #endif
-	rgtbdDesc[iTb].m_rgcbLength[side] = cb;
-	fclose(fp);
+		rgtbdDesc[iTb].m_rgcbLength[side] = cb;
+		rgtbdDesc[iTb].m_rgpdiDecodeInfo[side] = NULL;
+		rgtbdDesc[iTb].m_rgfCompressed[side] = false;
+		fclose(fp);
+	}
+
 	if (FRegisterTb(&(rgtbdDesc[iTb]))) {
 		pchCopy = (char*)PvMalloc(strlen(rgchTbName) + 1);
 		strcpy(pchCopy, rgchTbName);
@@ -3947,6 +4139,14 @@ int IInitializeTb
 	cbAllocated = 0;
 	// If there are open files, close those
 	VTbCloseFiles();
+
+	// Clear decompression cache
+	lastDecompressedBlock.iTb = -1;
+	lastDecompressedBlock.side = -1;
+	lastDecompressedBlock.blockNum = -1;
+	lastDecompressedBlock.data = NULL;
+	lastDecompressedBlock.dataSize = 0;
+
 #if defined (SMP)
 	// Init all locks
 	LockInit(lockLRU);
@@ -3973,8 +4173,14 @@ int IInitializeTb
 				free(rgtbdDesc[iTb].m_rgpchFileName[sd]);
 				rgtbdDesc[iTb].m_rgpchFileName[sd] = NULL;
 			}
+			if (NULL != rgtbdDesc[iTb].m_rgpdiDecodeInfo[sd]) {
+				free(rgtbdDesc[iTb].m_rgpdiDecodeInfo[sd]);
+				rgtbdDesc[iTb].m_rgpdiDecodeInfo[sd] = NULL;
+			}
+			rgtbdDesc[iTb].m_rgfCompressed[sd] = false;
 		}
 	}
+
 	// Search for existing TBs
 	iMaxTb = 0;
 	for (;;) {

@@ -167,10 +167,9 @@ int CheckUci() {
 			string option;
 			cin >> option;
 			cout << IInitializeTb(option.c_str()) << " man tablebases found" << endl;
+
+			// Count pieces for tablebase lookup
 			int pieces[10];
-			int wpieces[16];
-			int bpieces[16];
-			int wc = 0, bc = 0;
 			pieces[0] = __popcnt64(pos.White_Pawns);
 			pieces[1] = __popcnt64(pos.White_Knights);
 			pieces[2] = __popcnt64(pos.White_Bishops);
@@ -181,65 +180,213 @@ int CheckUci() {
 			pieces[7] = __popcnt64(pos.Black_Bishops);
 			pieces[8] = __popcnt64(pos.Black_Rooks);
 			pieces[9] = __popcnt64(pos.Black_Queens);
-			int tbid = IDescFindFromCounters(pieces);
-			cout << "Tablebase " << tbid << endl;
-			Move m;
-			while (pos.White_Pawns) {
-				int b = lsb(pos.White_Pawns);
-				wpieces[wc++] = b;
-				pos.White_Pawns ^= GeneralBoard[b];
-			}
-			while (pos.White_Knights) {
-				int b = lsb(pos.White_Knights);
-				wpieces[wc++] = b;
-				pos.White_Knights ^= GeneralBoard[b];
-			}
-			while (pos.White_Bishops) {
-				int b = lsb(pos.White_Bishops);
-				wpieces[wc++] = b;
-				pos.White_Bishops ^= GeneralBoard[b];
-			}
-			while (pos.White_Rooks) {
-				int b = lsb(pos.White_Rooks);
-				wpieces[wc++] = b;
-				pos.White_Rooks ^= GeneralBoard[b];
-			}
-			while (pos.White_Queens) {
-				int b = lsb(pos.White_Queens);
-				wpieces[wc++] = b;
-				pos.White_Queens ^= GeneralBoard[b];
+
+			// Check if we need to swap colors (Nalimov expects white to have material)
+			int white_material = pieces[0] + pieces[1] + pieces[2] + pieces[3] + pieces[4];
+			int black_material = pieces[5] + pieces[6] + pieces[7] + pieces[8] + pieces[9];
+			bool swap_colors = (black_material > white_material);
+
+			if (swap_colors) {
+				// Swap white and black pieces for tablebase lookup
+				for (int i = 0; i < 5; i++) {
+					int temp = pieces[i];
+					pieces[i] = pieces[i + 5];
+					pieces[i + 5] = temp;
+				}
 			}
 
-			while (pos.Black_Pawns) {
-				int b = lsb(pos.Black_Pawns);
-				bpieces[bc++] = b;
-				pos.Black_Pawns ^= GeneralBoard[b];
+			int tbid = IDescFindFromCounters(pieces);
+
+			if (tbid < 0) {
+				cout << "No tablebase found for this position" << endl;
 			}
-			while (pos.Black_Knights) {
-				int b = lsb(pos.Black_Knights);
-				bpieces[bc++] = b;
-				pos.Black_Knights ^= GeneralBoard[b];
+			else {
+				// Extract piece positions for index calculation
+				// Nalimov expects: King first, then other pieces in order
+				int wpieces[16];
+				int bpieces[16];
+				int wc = 0, bc = 0;
+
+				// If we swapped colors for tablebase lookup, swap the piece extraction too
+				if (swap_colors) {
+					// Black king MUST be first (swapped to "white" for TB)
+					wpieces[wc++] = lsb(pos.Black_King);
+
+					// Then extract black pieces (swapped to "white" for TB)
+					Bitboard temp_black_pawns = pos.Black_Pawns;
+					while (temp_black_pawns) {
+						wpieces[wc++] = lsb(temp_black_pawns);
+						temp_black_pawns &= temp_black_pawns - 1;
+					}
+					Bitboard temp_black_knights = pos.Black_Knights;
+					while (temp_black_knights) {
+						wpieces[wc++] = lsb(temp_black_knights);
+						temp_black_knights &= temp_black_knights - 1;
+					}
+					Bitboard temp_black_bishops = pos.Black_Bishops;
+					while (temp_black_bishops) {
+						wpieces[wc++] = lsb(temp_black_bishops);
+						temp_black_bishops &= temp_black_bishops - 1;
+					}
+					Bitboard temp_black_rooks = pos.Black_Rooks;
+					while (temp_black_rooks) {
+						wpieces[wc++] = lsb(temp_black_rooks);
+						temp_black_rooks &= temp_black_rooks - 1;
+					}
+					Bitboard temp_black_queens = pos.Black_Queens;
+					while (temp_black_queens) {
+						wpieces[wc++] = lsb(temp_black_queens);
+						temp_black_queens &= temp_black_queens - 1;
+					}
+
+					// White king MUST be first (swapped to "black" for TB)
+					bpieces[bc++] = lsb(pos.White_King);
+
+					// Then extract white pieces (swapped to "black" for TB)
+					Bitboard temp_white_pawns = pos.White_Pawns;
+					while (temp_white_pawns) {
+						bpieces[bc++] = lsb(temp_white_pawns);
+						temp_white_pawns &= temp_white_pawns - 1;
+					}
+					Bitboard temp_white_knights = pos.White_Knights;
+					while (temp_white_knights) {
+						bpieces[bc++] = lsb(temp_white_knights);
+						temp_white_knights &= temp_white_knights - 1;
+					}
+					Bitboard temp_white_bishops = pos.White_Bishops;
+					while (temp_white_bishops) {
+						bpieces[bc++] = lsb(temp_white_bishops);
+						temp_white_bishops &= temp_white_bishops - 1;
+					}
+					Bitboard temp_white_rooks = pos.White_Rooks;
+					while (temp_white_rooks) {
+						bpieces[bc++] = lsb(temp_white_rooks);
+						temp_white_rooks &= temp_white_rooks - 1;
+					}
+					Bitboard temp_white_queens = pos.White_Queens;
+					while (temp_white_queens) {
+						bpieces[bc++] = lsb(temp_white_queens);
+						temp_white_queens &= temp_white_queens - 1;
+					}
+				}
+				else {
+					// White king MUST be first
+					wpieces[wc++] = lsb(pos.White_King);
+
+					// Then extract white pieces
+					Bitboard temp_white_pawns = pos.White_Pawns;
+					while (temp_white_pawns) {
+						wpieces[wc++] = lsb(temp_white_pawns);
+						temp_white_pawns &= temp_white_pawns - 1;
+					}
+					Bitboard temp_white_knights = pos.White_Knights;
+					while (temp_white_knights) {
+						wpieces[wc++] = lsb(temp_white_knights);
+						temp_white_knights &= temp_white_knights - 1;
+					}
+					Bitboard temp_white_bishops = pos.White_Bishops;
+					while (temp_white_bishops) {
+						wpieces[wc++] = lsb(temp_white_bishops);
+						temp_white_bishops &= temp_white_bishops - 1;
+					}
+					Bitboard temp_white_rooks = pos.White_Rooks;
+					while (temp_white_rooks) {
+						wpieces[wc++] = lsb(temp_white_rooks);
+						temp_white_rooks &= temp_white_rooks - 1;
+					}
+					Bitboard temp_white_queens = pos.White_Queens;
+					while (temp_white_queens) {
+						wpieces[wc++] = lsb(temp_white_queens);
+						temp_white_queens &= temp_white_queens - 1;
+					}
+
+					// Black king MUST be first
+					bpieces[bc++] = lsb(pos.Black_King);
+
+					// Then extract black pieces
+					Bitboard temp_black_pawns = pos.Black_Pawns;
+					while (temp_black_pawns) {
+						bpieces[bc++] = lsb(temp_black_pawns);
+						temp_black_pawns &= temp_black_pawns - 1;
+					}
+					Bitboard temp_black_knights = pos.Black_Knights;
+					while (temp_black_knights) {
+						bpieces[bc++] = lsb(temp_black_knights);
+						temp_black_knights &= temp_black_knights - 1;
+					}
+					Bitboard temp_black_bishops = pos.Black_Bishops;
+					while (temp_black_bishops) {
+						bpieces[bc++] = lsb(temp_black_bishops);
+						temp_black_bishops &= temp_black_bishops - 1;
+					}
+					Bitboard temp_black_rooks = pos.Black_Rooks;
+					while (temp_black_rooks) {
+						bpieces[bc++] = lsb(temp_black_rooks);
+						temp_black_rooks &= temp_black_rooks - 1;
+					}
+					Bitboard temp_black_queens = pos.Black_Queens;
+					while (temp_black_queens) {
+						bpieces[bc++] = lsb(temp_black_queens);
+						temp_black_queens &= temp_black_queens - 1;
+					}
+				}
+
+				// Convert Current_Turn to tablebase format, swapping if needed
+				int tb_side = pos.Current_Turn ? 0 : 1;
+				if (swap_colors) {
+					tb_side = 1 - tb_side;  // Flip the side
+				}
+
+				// Get the index calculation function
+				PfnCalcIndex pfnCalc = PfnIndCalcFun(tbid, tb_side);
+				if (pfnCalc == NULL) {
+					cout << "No index function found for this tablebase" << endl;
+				}
+				else {
+					// Calculate the index
+					unsigned long tbindex = pfnCalc(wpieces, bpieces, -1, 0);
+
+					// Probe the tablebase
+					int score = TbtProbeTable(tbid, tb_side, tbindex);
+					cout << "Tablebase score: " << score << " - ";
+
+					// Interpret the score (score is relative to side to move in the TB)
+					if (score == 127) {
+						cout << "Position is broken/illegal" << endl;
+					}
+					else if (score == 0) {
+						cout << "Position is a draw" << endl;
+					}
+					else if (score > 0 && score <= 126) {
+						// Positive = side to move (in TB) wins
+						int moves = 127 - score;
+						// Determine which actual side wins
+						int winning_side = tb_side;  // tb_side already accounts for swap
+						if (swap_colors) {
+							winning_side = 1 - winning_side;  // Flip back to real colors
+						}
+						if (winning_side == 0) {
+							cout << "White wins - mate in " << moves << " moves" << endl;
+						} else {
+							cout << "Black wins - mate in " << moves << " moves" << endl;
+						}
+					}
+					else if (score < 0 && score >= -126) {
+						// Negative = side to move (in TB) loses
+						int moves = 127 + score;
+						// Determine which actual side wins (opposite of side to move)
+						int winning_side = 1 - tb_side;  // Opposite of tb_side
+						if (swap_colors) {
+							winning_side = 1 - winning_side;  // Flip back to real colors
+						}
+						if (winning_side == 0) {
+							cout << "White wins - mate in " << moves << " moves" << endl;
+						} else {
+							cout << "Black wins - mate in " << moves << " moves" << endl;
+						}
+					}
+				}
 			}
-			while (pos.White_Bishops) {
-				int b = lsb(pos.Black_Bishops);
-				bpieces[bc++] = b;
-				pos.Black_Bishops ^= GeneralBoard[b];
-			}
-			while (pos.Black_Rooks) {
-				int b = lsb(pos.Black_Rooks);
-				bpieces[bc++] = b;
-				pos.Black_Rooks ^= GeneralBoard[b];
-			}
-			while (pos.Black_Queens) {
-				int b = lsb(pos.Black_Queens);
-				bpieces[bc++] = b;
-				pos.Black_Queens ^= GeneralBoard[b];
-			}
-			wpieces[15] = lsb(pos.White_King);
-			bpieces[15] = lsb(pos.Black_King);
-			unsigned long tbindex = 0;//PfnIndCalcFun(tbid, pos.Current_Turn);                              DISABLED BECAUSE OF COMPILER ERROR
-			cout << "Index " << tbindex << endl;
-			cout << "Score is " << TbtProbeTable(tbid, 1, tbindex) << endl;
 		}
 
 		else if (UciCommand == "winc") {
