@@ -13,6 +13,7 @@ using namespace std;
 #include "Util.h"
 #include "CounterMove.h"
 #include "TimeUsage.h"
+#include "Tablebase.h"
 
 int Search::Time_Allocation = 0;
 bool Search::Searching = false;
@@ -36,6 +37,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 	int matemoves = 1000;
 	vector<LINE> pvlines;
 	//InitCounterMove();
+
 	for (int q = 1; q < MAXDEPTH; q++) {
 		Search::Depth = q;
 		output.lock();
@@ -67,10 +69,36 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 				Log << " currmovenumber " << (i + 1) << endl;
 				output.unlock();
 			}
+
 			pos.Make_Move(rootstack[i]);
-			int score = -AlphaBeta(&pos, -rootBeta, -rootAlpha, q - 1, &line, true, true);
-			rootstack[i].Score = score;
+
+			int score = 0;
+
+			// While we're at root, check the tablebases to see if the current position is a win/loss/draw
+			if (NalimovPath != "" && ((int)__popcnt64(pos.White_Pieces | pos.Black_Pieces) < 6)) {
+				int tb_score = -ProbeCurrentPositionNalimov();
+
+				if (tb_score != 127) {
+					int final_score = 0;
+
+					if (tb_score > 0) {
+						final_score = MATE + tb_score;
+					}
+					else if (tb_score < 0) {
+						final_score = -MATE + tb_score;
+					}
+
+					score = final_score;
+				}
+			}
+
+			else {
+				score = -AlphaBeta(&pos, -rootBeta, -rootAlpha, q - 1, &line, true, true);
+				rootstack[i].Score = score;
+			}
+
 			pos.Undo_Move(rootstack[i]);
+
 			if (score >= rootBeta) {
 				score = -AlphaBeta(&pos, -INF, INF, (q - 1), &line, true, true);
 				rootstack[i].Score = score;

@@ -35,7 +35,7 @@ int CheckUci() {
 	while (cin >> UciCommand) {
 		Log << ">> " << UciCommand << endl;
 		if (UciCommand == "uci") {
-			string Uci_Out = "id name " + Engine_Info() + "\n" + "id author David Cimbalista\n" + "option name TimePerMove type spin default 3 min 1 max 5\n" + "option name NalimovPath type string default NULL\n" + "option name MultiPV type spin default 1 min 1 max 500\n" + "uciok\n";
+			string Uci_Out = "id name " + Engine_Info() + "\n" + "id author David Cimbalista\n" + "option name TimePerMove type spin default 3 min 1 max 5\n" + "option name Nalimov type string\n" + "option name MultiPV type spin default 1 min 1 max 500\n" + "uciok\n";
 			cout << Uci_Out;
 			Log << Uci_Out;
 		}
@@ -162,7 +162,7 @@ int CheckUci() {
 			else if (optionname == "MultiPV") {
 				MultiPV = stoi(paramvalue);
 			}
-			else if (optionname == "NalimovPath") {
+			else if (optionname == "Nalimov") {
 				NalimovPath = paramvalue;
 
 				int Num_Man_Tablebases_Found = IInitializeTb(NalimovPath.c_str());
@@ -633,7 +633,17 @@ void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int no
 	for (int i = 0; i < (PvLines.size() < MultiPV ? PvLines.size() : MultiPV); i++) {
 		cout << "info multipv " << i + 1 << " depth " << depth << " seldepth " << depth + seldepth << " score ";
 		Log << "info multipv " << i + 1 << " depth " << depth << " seldepth " << depth + seldepth << " score ";
-		if (PvLines[i].score == MATE) {
+
+		// If the tablebases returned a hit
+		if (PvLines[i].score < -MATE) {
+			cout << "mate " << -(127 + PvLines[i].score + MATE);
+			Log << "mate " << -(127 + PvLines[i].score + MATE);
+		}
+		else if(PvLines[i].score > MATE) {
+			cout << "mate " << 127 - (PvLines[i].score - MATE);
+			Log << "mate " << 127 - (PvLines[i].score - MATE);
+		}
+		else if (PvLines[i].score == MATE) {
 			if (depth + 1 < *matemoves) {
 				cout << "mate " << ((depth + 1) / 2) - 1;
 				Log << "mate " << ((depth + 1) / 2) - 1;
