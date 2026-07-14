@@ -174,7 +174,6 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		return alpha;
 	}
 	Position position(posit);
-	bool inCheck = Search::Is_Mate(&position) == -MATE;
 	LINE line;
 	//TT Probe
 	TTEntry* tt = TT.probe(Get_Current_Hash_Key(&position));
@@ -207,6 +206,8 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 			return final_score;
 		}
 	}
+
+	bool inCheck = Search::Is_Mate(&position) == -MATE;
 
 	//Null Move Pruning
 	// very important, do not try null move pruning if we're already confirmed to be in a position where mate is already forced for either side
