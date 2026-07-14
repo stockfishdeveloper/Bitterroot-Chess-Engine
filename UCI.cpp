@@ -172,7 +172,7 @@ int CheckUci() {
 		}
 
 		else if (UciCommand == "probe") {
-			int score = ProbeCurrentPositionNalimov();
+			int score = ProbePositionNalimov(pos);
 			cout << "Probe result score: " << score << endl;
 			Log << "Probe result score: " << score << endl;
 		}

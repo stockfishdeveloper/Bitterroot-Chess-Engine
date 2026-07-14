@@ -11,20 +11,20 @@
 // Score of 103 meamns we mate the opponent in 24 moves
 // In general, 127 - score = number of moves till mate (from the player to move's perspective)
 
-int ProbeCurrentPositionNalimov() {
+int ProbePositionNalimov(Position& position) {
 
 	// Count pieces for tablebase lookup (indices: 0-4 white P,N,B,R,Q; 5-9 black P,N,B,R,Q)
 	int pieces[10];
-	pieces[0] = (int)__popcnt64(pos.White_Pawns);
-	pieces[1] = (int)__popcnt64(pos.White_Knights);
-	pieces[2] = (int)__popcnt64(pos.White_Bishops);
-	pieces[3] = (int)__popcnt64(pos.White_Rooks);
-	pieces[4] = (int)__popcnt64(pos.White_Queens);
-	pieces[5] = (int)__popcnt64(pos.Black_Pawns);
-	pieces[6] = (int)__popcnt64(pos.Black_Knights);
-	pieces[7] = (int)__popcnt64(pos.Black_Bishops);
-	pieces[8] = (int)__popcnt64(pos.Black_Rooks);
-	pieces[9] = (int)__popcnt64(pos.Black_Queens);
+	pieces[0] = (int)__popcnt64(position.White_Pawns);
+	pieces[1] = (int)__popcnt64(position.White_Knights);
+	pieces[2] = (int)__popcnt64(position.White_Bishops);
+	pieces[3] = (int)__popcnt64(position.White_Rooks);
+	pieces[4] = (int)__popcnt64(position.White_Queens);
+	pieces[5] = (int)__popcnt64(position.Black_Pawns);
+	pieces[6] = (int)__popcnt64(position.Black_Knights);
+	pieces[7] = (int)__popcnt64(position.Black_Bishops);
+	pieces[8] = (int)__popcnt64(position.Black_Rooks);
+	pieces[9] = (int)__popcnt64(position.Black_Queens);
 
 	// Look up the (signed) tablebase descriptor for the ACTUAL material.
 	// A positive id means the position already matches the stored orientation
@@ -52,16 +52,16 @@ int ProbeCurrentPositionNalimov() {
 	Bitboard sk_King, sk_Queens, sk_Rooks, sk_Bishops, sk_Knights, sk_Pawns; // strong (TB white) side
 	Bitboard wk_King, wk_Queens, wk_Rooks, wk_Bishops, wk_Knights, wk_Pawns; // weak   (TB black) side
 	if (!invert) {
-		sk_King = pos.White_King;   sk_Queens = pos.White_Queens; sk_Rooks = pos.White_Rooks;
-		sk_Bishops = pos.White_Bishops; sk_Knights = pos.White_Knights; sk_Pawns = pos.White_Pawns;
-		wk_King = pos.Black_King;   wk_Queens = pos.Black_Queens; wk_Rooks = pos.Black_Rooks;
-		wk_Bishops = pos.Black_Bishops; wk_Knights = pos.Black_Knights; wk_Pawns = pos.Black_Pawns;
+		sk_King = position.White_King;   sk_Queens = position.White_Queens; sk_Rooks = position.White_Rooks;
+		sk_Bishops = position.White_Bishops; sk_Knights = position.White_Knights; sk_Pawns = position.White_Pawns;
+		wk_King = position.Black_King;   wk_Queens = position.Black_Queens; wk_Rooks = position.Black_Rooks;
+		wk_Bishops = position.Black_Bishops; wk_Knights = position.Black_Knights; wk_Pawns = position.Black_Pawns;
 	}
 	else {
-		sk_King = pos.Black_King;   sk_Queens = pos.Black_Queens; sk_Rooks = pos.Black_Rooks;
-		sk_Bishops = pos.Black_Bishops; sk_Knights = pos.Black_Knights; sk_Pawns = pos.Black_Pawns;
-		wk_King = pos.White_King;   wk_Queens = pos.White_Queens; wk_Rooks = pos.White_Rooks;
-		wk_Bishops = pos.White_Bishops; wk_Knights = pos.White_Knights; wk_Pawns = pos.White_Pawns;
+		sk_King = position.Black_King;   sk_Queens = position.Black_Queens; sk_Rooks = position.Black_Rooks;
+		sk_Bishops = position.Black_Bishops; sk_Knights = position.Black_Knights; sk_Pawns = position.Black_Pawns;
+		wk_King = position.White_King;   wk_Queens = position.White_Queens; wk_Rooks = position.White_Rooks;
+		wk_Bishops = position.White_Bishops; wk_Knights = position.White_Knights; wk_Pawns = position.White_Pawns;
 	}
 
 #define TB_SQ(s) (invert ? ((s) ^ 56) : (s))
@@ -85,13 +85,13 @@ int ProbeCurrentPositionNalimov() {
 #undef TB_SQ
 
 	// Side to move, as seen by the tablebase (0 = TB white to move, 1 = TB black).
-	// pos.Current_Turn is true when white is to move. When inverting, the TB white
+	// position.Current_Turn is true when white is to move. When inverting, the TB white
 	// side is our black side, so the side-to-move flips.
 	int tb_side;
 	if (!invert)
-		tb_side = pos.Current_Turn ? 0 : 1;
+		tb_side = position.Current_Turn ? 0 : 1;
 	else
-		tb_side = pos.Current_Turn ? 1 : 0;
+		tb_side = position.Current_Turn ? 1 : 0;
 
 	PfnCalcIndex pfnCalc = PfnIndCalcFun(tbid, tb_side);
 	if (pfnCalc == NULL) {
@@ -104,16 +104,16 @@ int ProbeCurrentPositionNalimov() {
 	// actually capture there; otherwise it must be XX (-1). When inverting we
 	// vertically flip it (^ 56) to match the flipped piece squares.
 	int sqEnP = -1;  // XX
-	if (pos.EP_Square != 0) {
-		int epsq = lsb(pos.EP_Square);
+	if (position.EP_Square != 0) {
+		int epsq = lsb(position.EP_Square);
 		int epFile = epsq & 7, epRank = epsq >> 3;
 		bool canCapture = false;
-		if (pos.Current_Turn) {
+		if (position.Current_Turn) {
 			// White to move: e.p. target on rank 6 (index 5), capturing white pawn on rank 5.
 			if (epRank == 5) {
 				for (int df = -1; df <= 1; df += 2) {
 					int ff = epFile + df;
-					if (ff >= 0 && ff < 8 && (pos.White_Pawns & (1ULL << (32 + ff))))
+					if (ff >= 0 && ff < 8 && (position.White_Pawns & (1ULL << (32 + ff))))
 						canCapture = true;
 				}
 			}
@@ -123,7 +123,7 @@ int ProbeCurrentPositionNalimov() {
 			if (epRank == 2) {
 				for (int df = -1; df <= 1; df += 2) {
 					int ff = epFile + df;
-					if (ff >= 0 && ff < 8 && (pos.Black_Pawns & (1ULL << (24 + ff))))
+					if (ff >= 0 && ff < 8 && (position.Black_Pawns & (1ULL << (24 + ff))))
 						canCapture = true;
 				}
 			}

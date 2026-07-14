@@ -76,7 +76,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 
 			// While we're at root, check the tablebases to see if the current position is a win/loss/draw
 			if (NalimovPath != "" && ((int)__popcnt64(pos.White_Pieces | pos.Black_Pieces) < 6)) {
-				int tb_score = -ProbeCurrentPositionNalimov();
+				int tb_score = -ProbePositionNalimov(pos);
 
 				if (tb_score != 127) {
 					int final_score = 0;
@@ -180,12 +180,34 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 			if (tt->nodetype == Exact) return tt->score;
 		}
 	}
+
+	// If position has less than 5 pieces, check the tablebases to see if the current position is a win/loss/draw
+	if (NalimovPath != "" && depth >= 3 && ((int)__popcnt64(position.White_Pieces | position.Black_Pieces) < 6)) {
+		int tb_score = ProbePositionNalimov(position);
+
+		if (tb_score != 127) {
+			int final_score = 0;
+
+			if (tb_score > 0) {
+				final_score = MATE + tb_score;
+			}
+			else if (tb_score < 0) {
+				final_score = -MATE + tb_score;
+			}
+
+			return final_score;
+		}
+	}
+
 	//Null Move Pruning
-	if ((!inCheck) /*&& !PvNode*/ && (depth > 3) && (position.Non_Pawn_Material() > 0)) {
+	// very important, do not try null move pruning if we're already confirmed to be in a position where mate is already forced for either side
+	// doing it here completelly wrecks the score result, leading to inaccurate mate scores
+	if ((!inCheck) /*&& !PvNode*/ && (depth > 3) && (position.Non_Pawn_Material() > 0) && (beta > -MATE) && (beta < MATE)) {
 		position.Current_Turn ^= 1;
 		int score = (depth == 4 ?
 			-QuiescenceSearch(&position, -beta, -beta + 1, depth - 3) :
 			-AlphaBeta(&position, -beta, -beta + 1, depth - 3, &line, false, false));
+		
 		if (score >= beta) {
 			position.Current_Turn ^= 1;
 			return beta;
@@ -248,6 +270,7 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		int score;
 		//if(i < 3 && PvNode)
 		score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, true, false);
+
 		/*else if(depth > 2
 				&& i > 2
 				&& !PvNode
@@ -269,14 +292,27 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		}
 		else
 			score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, false, true);*/
+
 		position.Undo_Move(moves[i]);
+
 		if (score >= beta) {
 			TT.save(depth, beta, moves[i], Beta, Get_Current_Hash_Key(&position));
 			if (moves[i].C == NONE)
 				CounterMove[depth][lsb(moves[i].From)][lsb(moves[i].To)]++;
 			return beta;
 		}
+
 		if (score > alpha) {
+			// here we need to check if this position was a tablebase mate, if so, adjust distance to mate accordingly so that the score turns out right
+			if (score < -MATE) {
+				if (!position.Current_Turn)
+					score += 1;
+			}
+			if (score > MATE) {
+				if (!position.Current_Turn)
+					score -= 1;
+			}
+
 			pline->argmove[0] = moves[i];
 			pline->score = score;
 			memcpy(pline->argmove + 1, line.argmove, line.cmove * sizeof(Move));

@@ -8,6 +8,6 @@
 
 using namespace std;
 
-int ProbeCurrentPositionNalimov();
+int ProbePositionNalimov(Position& position);
 
 #endif
