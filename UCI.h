@@ -16,6 +16,7 @@ extern int MultiPV;
 extern Bitboard Current_Rank;
 extern string UciCommand;
 extern string NalimovPath;
+extern string SyzygyPath;
 extern LINE PVline;
 extern ofstream Log;
 

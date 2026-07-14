@@ -1,4 +1,9 @@
 #include "Tablebase.h"
+#include <stdint.h>
+
+// The Syzygy probing code is C; its headers self-guard with extern "C".
+#include "Syzygy/tbprobe.h"
+#include "Syzygy/tbinterface.h"
 
 
 // Probe the currently-loaded position against the Nalimov tablebases.
@@ -136,4 +141,138 @@ int ProbePositionNalimov(Position& position) {
 	int score = TbtProbeTable(tbid, tb_side, tbindex);
 
 	return score;
+}
+
+
+// ===========================================================================
+// Syzygy tablebase integration
+// ===========================================================================
+
+// One reusable scratch position for probing. Probing happens only on the
+// search thread, so a single shared instance is fine (see Thread.cpp).
+static TB_Position* g_syzygyPos = nullptr;
+static bool g_syzygyInit = false;
+
+// Fill pt[]/sq[] with the pieces of 'p' using Syzygy piece codes
+// (WPAWN=1..WKING=6, BPAWN=9..BKING=14) and squares A1=0..H8=63.
+// Returns the number of pieces placed.
+static int BuildSyzygyPieces(const Position& p, uint8_t* pt, uint8_t* sq) {
+	struct { Bitboard bb; uint8_t code; } lists[] = {
+		{ p.White_Pawns,   1 }, { p.White_Knights,  2 }, { p.White_Bishops,  3 },
+		{ p.White_Rooks,   4 }, { p.White_Queens,   5 }, { p.White_King,     6 },
+		{ p.Black_Pawns,   9 }, { p.Black_Knights, 10 }, { p.Black_Bishops, 11 },
+		{ p.Black_Rooks,  12 }, { p.Black_Queens,  13 }, { p.Black_King,    14 },
+	};
+	int n = 0;
+	for (auto& L : lists)
+		for (Bitboard b = L.bb; b; b &= b - 1) {
+			sq[n] = (uint8_t)lsb(b);
+			pt[n] = L.code;
+			n++;
+		}
+	return n;
+}
+
+int InitSyzygy(const char* path) {
+	if (!g_syzygyInit) {
+		TBitf_init();
+		g_syzygyPos = TBitf_alloc_position();
+		g_syzygyInit = true;
+	}
+	TB_init(path);
+	return TB_NumTables[TB_WDL];
+}
+
+int SyzygyMaxPieces() {
+	return g_syzygyInit ? TB_MaxCardinality[TB_WDL] : 0;
+}
+
+// Shared setup: build the scratch TB_Position from the engine position, or
+// return false if the position cannot/should not be probed. 'maxPieces' is the
+// cardinality limit of the relevant table type (WDL or DTZ).
+static bool SetupSyzygy(Position& position, int maxPieces) {
+	if (!g_syzygyInit || g_syzygyPos == nullptr || maxPieces < 2)
+		return false;
+	// Syzygy tables do not include positions with castling rights.
+	if (position.WhiteCanCastleK || position.WhiteCanCastleQ ||
+		position.BlackCanCastleK || position.BlackCanCastleQ)
+		return false;
+	uint8_t pt[8], sq[8];
+	int n = BuildSyzygyPieces(position, pt, sq);
+	if (n > maxPieces)
+		return false;
+	int ep = position.EP_Square ? (int)lsb(position.EP_Square) : -1;
+	int stm = position.Current_Turn ? 0 : 1; // 0 = white to move, 1 = black
+	return TBitf_setup_from_pieces(g_syzygyPos, n, pt, sq, stm, ep);
+}
+
+int ProbeSyzygyWDL(Position& position, bool* success) {
+	*success = false;
+	if (!SetupSyzygy(position, SyzygyMaxPieces()))
+		return 0;
+	bool ok = false;
+	int wdl = TB_probe_wdl(g_syzygyPos, &ok);
+	*success = ok;
+	return wdl;
+}
+
+int ProbeSyzygyDTZ(Position& position, bool* success) {
+	*success = false;
+	if (!SetupSyzygy(position, g_syzygyInit ? TB_MaxCardinality[TB_DTZ] : 0))
+		return 0;
+	bool ok = false;
+	int dtz = TB_probe_dtz(g_syzygyPos, &ok);
+	*success = ok;
+	return dtz;
+}
+
+// Around-MATE score band for TB results. Wins are MATE + k, losses -MATE - k,
+// with k in [1, 126] so the values stay strictly between the engine's real
+// mate scores and never land exactly on +/-MATE (which the UI treats
+// specially). Larger k = closer win / faster loss.
+static const int TB_K_MAX = 126;
+
+bool ProbeSyzygySearchWDL(Position& position, int plyFromRoot, int& score) {
+	bool ok = false;
+	int wdl = ProbeSyzygyWDL(position, &ok);
+	if (!ok)
+		return false;
+	if (wdl >= 2 || wdl <= -2) {
+		// Approximate distance by ply-from-root: reaching a win sooner scores
+		// higher, which nudges the search toward the winning TB region.
+		int adj = plyFromRoot < 0 ? 0 : (plyFromRoot > 120 ? 120 : plyFromRoot);
+		int k = TB_K_MAX - adj;
+		if (k < 1) k = 1;
+		score = wdl >= 2 ? (MATE + k) : (-MATE - k);
+	}
+	else {
+		// draw, cursed win or blessed loss -> a draw under the 50-move rule.
+		score = 0;
+	}
+	return true;
+}
+
+bool ProbeSyzygyRootDTZ(Position& position, int& score) {
+	bool ok = false;
+	int wdl = ProbeSyzygyWDL(position, &ok);
+	if (!ok)
+		return false;
+	if (wdl > -2 && wdl < 2) {          // draw / cursed win / blessed loss
+		score = 0;
+		return true;
+	}
+	bool okz = false;
+	int dtz = ProbeSyzygyDTZ(position, &okz);
+	if (!okz) {
+		// Decisive by WDL but no DTZ table: score as a win/loss without a
+		// precise distance.
+		score = wdl >= 2 ? (MATE + 1) : (-MATE - 1);
+		return true;
+	}
+	int dist = dtz < 0 ? -dtz : dtz;    // plies to zeroing
+	if (dist < 1) dist = 1;
+	if (dist > TB_K_MAX) dist = TB_K_MAX;
+	int k = (TB_K_MAX + 1) - dist;      // fewer plies -> larger k -> better
+	score = wdl >= 2 ? (MATE + k) : (-MATE - k);
+	return true;
 }

@@ -157,6 +157,8 @@
     <ClCompile Include="..\Perft.cpp" />
     <ClCompile Include="..\Position.cpp" />
     <ClCompile Include="..\Search.cpp" />
+    <ClCompile Include="..\Syzygy\tbinterface_bb.c" />
+    <ClCompile Include="..\Syzygy\tbprobe.c" />
     <ClCompile Include="..\Tablebase.cpp" />
     <ClCompile Include="..\Thread.cpp" />
     <ClCompile Include="..\TimeUsage.cpp" />
@@ -178,6 +180,8 @@
     <ClInclude Include="..\Perft.h" />
     <ClInclude Include="..\Position.h" />
     <ClInclude Include="..\Search.h" />
+    <ClInclude Include="..\Syzygy\tbinterface.h" />
+    <ClInclude Include="..\Syzygy\tbprobe.h" />
     <ClInclude Include="..\Tablebase.h" />
     <ClInclude Include="..\Thread.h" />
     <ClInclude Include="..\TimeUsage.h" />

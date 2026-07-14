@@ -19,6 +19,7 @@ using namespace std;
 int CheckUci();
 string UciCommand;
 string NalimovPath = "";
+string SyzygyPath = "";
 Bitboard Current_Rank = 72057594037927936;
 ofstream Log("Log.txt");//For writing to a text file
 int wtime = 0;
@@ -35,7 +36,7 @@ int CheckUci() {
 	while (cin >> UciCommand) {
 		Log << ">> " << UciCommand << endl;
 		if (UciCommand == "uci") {
-			string Uci_Out = "id name " + Engine_Info() + "\n" + "id author David Cimbalista\n" + "option name TimePerMove type spin default 3 min 1 max 5\n" + "option name Nalimov type string\n" + "option name MultiPV type spin default 1 min 1 max 500\n" + "uciok\n";
+			string Uci_Out = "id name " + Engine_Info() + "\n" + "id author David Cimbalista\n" + "option name TimePerMove type spin default 3 min 1 max 5\n" + "option name Nalimov type string\n" + "option name Syzygy type string\n" + "option name MultiPV type spin default 1 min 1 max 500\n" + "uciok\n";
 			cout << Uci_Out;
 			Log << Uci_Out;
 		}
@@ -169,12 +170,39 @@ int CheckUci() {
 				cout  << Num_Man_Tablebases_Found << " man tablebases found" << endl;
 				Log << Num_Man_Tablebases_Found << " man tablebases found" << endl;
 			}
+			else if (optionname == "Syzygy") {
+				SyzygyPath = paramvalue;
+
+				int found = InitSyzygy(SyzygyPath.c_str());
+				cout << "info string Syzygy: " << found << " WDL tablebases found (up to "
+					<< SyzygyMaxPieces() << " pieces)" << endl;
+				Log << "Syzygy: " << found << " WDL tablebases found" << endl;
+			}
 		}
 
-		else if (UciCommand == "probe") {
+		else if (UciCommand == "proben") {
 			int score = ProbePositionNalimov(pos);
 			cout << "Probe result score: " << score << endl;
 			Log << "Probe result score: " << score << endl;
+		}
+
+		else if (UciCommand == "probes") {
+			bool ok = false;
+			int wdl = ProbeSyzygyWDL(pos, &ok);
+			if (!ok) {
+				cout << "Syzygy WDL probe failed (not loaded / too many pieces / castling rights / no table)" << endl;
+			}
+			else {
+				const char* names[] = { "loss", "blessed loss (draw under 50-move)", "draw",
+										"cursed win (draw under 50-move)", "win" };
+				cout << "WDL = " << wdl << " (" << names[wdl + 2] << ")" << endl;
+				bool okz = false;
+				int dtz = ProbeSyzygyDTZ(pos, &okz);
+				if (okz)
+					cout << "DTZ = " << dtz << " ply" << endl;
+				else
+					cout << "DTZ probe failed (no DTZ table for this material)" << endl;
+			}
 		}
 
 		else if (UciCommand == "winc") {

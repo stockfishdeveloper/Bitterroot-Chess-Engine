@@ -98,8 +98,23 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 			}
 
 			else {
-				score = -AlphaBeta(&pos, -rootBeta, -rootAlpha, q - 1, &line, true, true);
-				rootstack[i].Score = score;
+				// Syzygy root probe (DTZ) for correct conversion distance. Used
+				// when the Nalimov path above did not apply to this position.
+				bool syzHit = false;
+				if (SyzygyPath != "" &&
+					(int)__popcnt64(pos.White_Pieces | pos.Black_Pieces) <= SyzygyMaxPieces()) {
+					int tb_score;
+					if (ProbeSyzygyRootDTZ(pos, tb_score)) {
+						tbhits++;
+						score = -tb_score; // pos is the child (opponent to move); flip to our view
+						rootstack[i].Score = score;
+						syzHit = true;
+					}
+				}
+				if (!syzHit) {
+					score = -AlphaBeta(&pos, -rootBeta, -rootAlpha, q - 1, &line, true, true);
+					rootstack[i].Score = score;
+				}
 			}
 
 			pos.Undo_Move(rootstack[i]);
@@ -204,6 +219,17 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 			}
 
 			return final_score;
+		}
+	}
+
+	// Syzygy WDL probe: if this position is in the tablebases, return a
+	// win/draw/loss score directly (distance approximated by ply from root).
+	if (SyzygyPath != "" && depth >= 3 &&
+		(int)__popcnt64(position.White_Pieces | position.Black_Pieces) <= SyzygyMaxPieces()) {
+		int tb_score;
+		if (ProbeSyzygySearchWDL(position, Search::Depth - depth, tb_score)) {
+			tbhits++;
+			return tb_score;
 		}
 	}
 
