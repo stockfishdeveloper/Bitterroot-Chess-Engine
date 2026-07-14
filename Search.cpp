@@ -21,6 +21,7 @@ Bitboard Search::Nodes = 0;
 int Search::Depth = 0;
 int Search::Seldepth = 0;
 bool Search::STOP_SEARCHING_NOW = false;
+Bitboard Search::tbhits = 0;
 Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 	Move Best;
 	Best.Score = -INF;
@@ -35,6 +36,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 	vector<Move>rootstack;
 	int count = 0;
 	int matemoves = 1000;
+	Search::tbhits = 0;
 	vector<LINE> pvlines;
 	//InitCounterMove();
 
@@ -80,6 +82,9 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 
 				if (tb_score != 127) {
 					int final_score = 0;
+
+					// increment our tbhits counteer
+					tbhits++;
 
 					if (tb_score > 0) {
 						final_score = MATE + tb_score;
@@ -135,7 +140,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 		// sort all pvlines by score
 		std::stable_sort(pvlines.begin(), pvlines.end(), [](const LINE& lhs, const LINE& rhs) { return (lhs.score > rhs.score); });
 		// output all our multipv lines
-		Uci_Pv(q, Seldepth, Best, &matemoves, timer.Get_Time(), Nodes, pvlines);
+		Uci_Pv(q, Seldepth, Best, &matemoves, timer.Get_Time(), Nodes, Search::tbhits, pvlines);
 
 		// here we need to clear out the pvlines since we don't care about pv lines from previous depths
 		pvlines.clear();
@@ -188,11 +193,15 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		if (tb_score != 127) {
 			int final_score = 0;
 
+			// increment our tbhits counteer
+			tbhits++;
+
+			// score will be mate in x moves plus however many full moves we are from root
 			if (tb_score > 0) {
-				final_score = MATE + tb_score;
+				final_score = MATE + tb_score - ((Search::Depth - depth) / 2);
 			}
 			else if (tb_score < 0) {
-				final_score = -MATE + tb_score;
+				final_score = -MATE + tb_score + ((Search::Depth - depth) / 2);
 			}
 
 			return final_score;
@@ -303,16 +312,6 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 		}
 
 		if (score > alpha) {
-			// here we need to check if this position was a tablebase mate, if so, adjust distance to mate accordingly so that the score turns out right
-			if (score < -MATE) {
-				if (!position.Current_Turn)
-					score += 1;
-			}
-			if (score > MATE) {
-				if (!position.Current_Turn)
-					score -= 1;
-			}
-
 			pline->argmove[0] = moves[i];
 			pline->score = score;
 			memcpy(pline->argmove + 1, line.argmove, line.cmove * sizeof(Move));

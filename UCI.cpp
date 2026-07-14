@@ -628,7 +628,7 @@ string Engine_Info() {
 	return result;
 
 }
-void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int nodes, vector<LINE> PvLines) {
+void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int nodes, int tbhits, vector<LINE> PvLines) {
 	output.lock();
 	for (int i = 0; i < (PvLines.size() < MultiPV ? PvLines.size() : MultiPV); i++) {
 		cout << "info multipv " << i + 1 << " depth " << depth << " seldepth " << depth + seldepth << " score ";
@@ -670,6 +670,10 @@ void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int no
 			Log << "cp " << PvLines[i].score;
 		}
 		cout << " hashfull " << int((TT.count / 8388608.0) * 1000);
+
+		if(tbhits > 0)
+			cout << " tbhits " << tbhits;
+
 		cout << " pv " << PvLines[i].Output();
 		Log << " pv " << PvLines[i].Output();
 		cout << "time " << time << " nodes " << nodes << " nps " << int(nodes / (float(time + 1) / 1000)) << endl;

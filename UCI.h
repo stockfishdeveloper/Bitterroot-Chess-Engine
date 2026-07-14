@@ -20,7 +20,7 @@ extern LINE PVline;
 extern ofstream Log;
 
 extern int CheckUci();
-void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int nodes, vector<LINE> PvLines);
+void Uci_Pv(int depth, int seldepth, Move best, int* matemoves, int time, int nodes, int tbhits, vector<LINE> PvLines);
 void Startpos();
 void GoCommand();
 int Parse_Fen(string Fen);

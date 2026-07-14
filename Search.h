@@ -104,6 +104,7 @@ namespace Search {
 	extern int Time_Allocation;
 	extern bool STOP_SEARCHING_NOW;
 	extern Bitboard Nodes;
+	extern Bitboard tbhits;
 	extern LINE line;
 
 	void Clear();
