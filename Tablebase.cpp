@@ -100,8 +100,7 @@ int ProbePositionNalimov(Position& position) {
 
 	PfnCalcIndex pfnCalc = PfnIndCalcFun(tbid, tb_side);
 	if (pfnCalc == NULL) {
-		cout << "No index function found for this tablebase" << endl;
-		return 0;
+		return 127;
 	}
 
 	// En passant. Nalimov's sqEnP is the en-passant target square (identical to
