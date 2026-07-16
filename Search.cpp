@@ -80,7 +80,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 			if (NalimovPath != "" && ((int)__popcnt64(pos.White_Pieces | pos.Black_Pieces) < 6)) {
 				int tb_score = -ProbePositionNalimov(pos);
 
-				if (tb_score != 127) {
+				if (tb_score != -127) {
 					int final_score = 0;
 
 					// increment our tbhits counteer
@@ -201,7 +201,7 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 	}
 
 	// If position has less than 5 pieces, check the tablebases to see if the current position is a win/loss/draw
-	if (NalimovPath != "" && depth >= 3 && ((int)__popcnt64(position.White_Pieces | position.Black_Pieces) < 6)) {
+	if (NalimovPath != "" && ((int)__popcnt64(position.White_Pieces | position.Black_Pieces) < 6)) {
 		int tb_score = ProbePositionNalimov(position);
 
 		if (tb_score != 127) {
@@ -444,6 +444,28 @@ void Search::Clear() {
 }
 
 int Search::QuiescenceSearch(Position* posit, int alpha, int beta, int depth) {
+	// If position has less than 5 pieces, check the tablebases to see if the current position is a win/loss/draw
+	if (NalimovPath != "" && ((int)__popcnt64(posit->White_Pieces | posit->Black_Pieces) < 6)) {
+		int tb_score = ProbePositionNalimov(*posit);
+
+		if (tb_score != 127) {
+			int final_score = 0;
+
+			// increment our tbhits counter
+			tbhits++;
+
+			// score will be mate in x moves plus however many full moves we are from root.
+			if (tb_score > 0) {
+				final_score = MATE + tb_score - ((Search::Depth + depth - 3) / 2);
+			}
+			else if (tb_score < 0) {
+				final_score = -MATE + tb_score + ((Search::Depth + depth - 3) / 2);
+			}
+
+			return final_score;
+		}
+	}
+
 	int stand_pat = posit->Current_Turn ? Eval::Evaluate_Position(posit) : -Eval::Evaluate_Position(posit);
 	Search::Seldepth = std::max(depth, Search::Seldepth);
 	if (stand_pat >= beta)

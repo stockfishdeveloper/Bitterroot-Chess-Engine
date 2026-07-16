@@ -40,7 +40,7 @@ int ProbePositionNalimov(Position& position) {
 	int tbid_signed = IDescFindFromCounters(pieces);
 	if (tbid_signed == 0) {
 		cout << "No tablebase found for this position" << endl;
-		return 0;
+		return 127;
 	}
 	bool invert = (tbid_signed < 0);
 	int tbid = invert ? -tbid_signed : tbid_signed;
