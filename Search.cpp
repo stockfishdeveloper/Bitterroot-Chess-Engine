@@ -41,9 +41,6 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 
 	for (int q = 1; q < MAXDEPTH; q++) {
 		Search::Depth = q;
-		output.lock();
-		cout << "info depth " << Search::Depth << " nodes " << Search::Nodes << endl;
-		output.unlock();
 
 		if (q == 1) {
 			pos.Current_Turn ? Generate_White_Moves(false, pos) : Generate_Black_Moves(false, pos);
