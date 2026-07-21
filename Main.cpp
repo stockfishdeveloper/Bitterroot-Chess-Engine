@@ -12,5 +12,3 @@ int main() {
 	CheckUci(); //Main command loop
 	return 0;
 }
-
-

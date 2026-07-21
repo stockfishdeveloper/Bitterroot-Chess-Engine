@@ -38,7 +38,6 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 	int matemoves = 1000;
 	Search::tbhits = 0;
 	vector<LINE> pvlines;
-	//InitCounterMove();
 
 	for (int q = 1; q < MAXDEPTH; q++) {
 		Search::Depth = q;
@@ -130,7 +129,6 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 				memcpy(::PVline.argmove + 1, line.argmove, line.cmove * sizeof(Move));
 				Best = rootstack[i];
 				Best.Score = score;
-				//Uci_Pv(q, Seldepth, Best, &matemoves, timer.Get_Time(), Nodes);
 				rootAlpha = score;
 			}
 
@@ -158,10 +156,8 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 		TT.save(q, rootAlpha, Best, Alpha, Get_Current_Hash_Key(&pos));
 		rootAlpha = Best.Score - 50;
 		//rootBeta = Best.Score + 50;
-		//Uci_Pv(q, Seldepth, Best, &matemoves, timer.Get_Time(), Nodes);
 		LINE* f = new LINE;
 		f->cmove = 0;
-		//::PVline = *f;
 		line = *f;
 		delete f;
 
@@ -256,73 +252,24 @@ int Search::AlphaBeta(Position* posit, int alpha, int beta, int depth, LINE* pli
 	vector<Move> moves;
 	for (int i = 0; i < position.numlegalmoves; i++) {
 		position.LegalMoves[i].Score = 0;
-		//if(tt != NULL) if(tt->best.From == position.LegalMoves[i].From && tt->best.To == position.LegalMoves[i].To) position.LegalMoves[i].Score += 1000;
+
 		if (position.LegalMoves[i].C != NONE)
 			position.LegalMoves[i].Score += (Get_Move_Score(position.LegalMoves[i]));
-		//if(position.LegalMoves[i].C != NONE)
-			//position.LegalMoves[i].Score += SEE(&position, position.LegalMoves[i].To);
-		//if(position.LegalMoves[i].Promotion)
-			//position.LegalMoves[i].Score += 50;
+
 		position.LegalMoves[i].Score += CounterMove[depth][lsb(position.LegalMoves[i].From)][lsb(position.LegalMoves[i].To)] * 200;
 		//position.LegalMoves[i].Score += Eval::EvalPSQTResult(&position, position.LegalMoves[i]); //SEEMED TO BE WORTH A LOT OF ELO--Sucks a lot of NPS
 		moves.push_back(position.LegalMoves[i]);
 	}
 	std::stable_sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs) { return lhs.Score > rhs.Score; });
-	/*for(int i = 0; i < moves.size(); i++)
-	{
-		Log << i << " " << moves[i].Score << (moves[i].Score >= 1000 ? " tt move" : "") << (moves[i].Promotion  ? " promotion" : "");
-		if(CounterMove[depth][lsb(position.LegalMoves[i].From)][lsb(position.LegalMoves[i].To)] != 0)
-			Log << " CounterMove score was: " << CounterMove[depth][lsb(position.LegalMoves[i].From)][lsb(position.LegalMoves[i].To)] << endl;
-		else
-			Log << endl;
-	}
-	Log << "END" << endl;*/
-	//int pos_score = Eval::Evaluate_Position(&position);
+
 	bool pvfound = false;
 	//if(inCheck) depth++; Check extension--seems to be worth ~50-100 ELO
 	for (int i = 0; i < position.numlegalmoves; i++) {
-		/*if(depth == 2 && !inCheck && !PvNode)
-		{
-			if((pos_score + 200) <= alpha)
-			continue;
-		}
-		if(depth == 3 && !inCheck && !PvNode)
-		{
-			if((pos_score + 500) <= alpha)
-			continue;
-		}
-		if(depth == 4 && !inCheck && !PvNode)
-		{
-			if((pos_score + 800) <= alpha)
-			continue;
-		}*/
 		Nodes++;
 		position.Make_Move(moves[i]);
 		int score;
-		//if(i < 3 && PvNode)
-		score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, true, false);
 
-		/*else if(depth > 2
-				&& i > 2
-				&& !PvNode
-				&& (moves[i].C == NONE)
-				&& (!(moves[i].Promotion))
-				&& !inCheck)
-				{
-					score = -AlphaBeta(&position, -(alpha + 1), -alpha, depth - 2, &line, false, true);
-					if(score > alpha)
-						score = -AlphaBeta(&position, -(alpha + 1), -alpha, depth - 1, &line, false, true);
-					if(score > alpha)
-						score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, false, true);
-				}
-		else if(PvNode)
-		{
-			score = -AlphaBeta(&position, -(alpha+1), -alpha, depth - 1, &line, true, false);
-			if(score > alpha)
-				score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, true, false);
-		}
-		else
-			score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, false, true);*/
+		score = -AlphaBeta(&position, -beta, -alpha, depth - 1, &line, true, false);
 
 		position.Undo_Move(moves[i]);
 
@@ -514,19 +461,13 @@ int Search::QuiescenceSearch(Position* posit, int alpha, int beta, int depth) {
 	for (unsigned int i = 0; i < (stack.size()); i++) {
 		if (stand_pat + Get_Cp_Value(stack[i].C) <= alpha)
 			continue;
-		//if(SEE(&position, position.LegalMoves[i].To) < 0)
-			//continue;
+
 		Nodes++;
 		position.Make_Move(stack[i]);
 		int score;
-		//if(i == 0)
+
 		score = -QuiescenceSearch(&position, -beta, -alpha, depth + 1);
-		/*else
-		{
-			score = -QuiescenceSearch(&position, -beta, -beta + 1, depth + 1);
-			if(score > alpha)
-				score = -QuiescenceSearch(&position, -beta, -alpha, depth + 1);
-		}*/
+
 		position.Undo_Move(stack[i]);
 		if (score >= beta) {
 			TT.save(depth, beta, stack[i], Beta, Get_Current_Hash_Key(&position));
@@ -575,11 +516,8 @@ int Search::SEE(Position* position, Bitboard square) {
 	Piece victim = position->Get_Piece_From_Bitboard(square);
 	Bitboard b = position->Current_Turn == true ? position->GetLeastWhiteAttacker(square) : position->GetLeastBlackAttacker(square);
 	Piece aggressor = position->Get_Piece_From_Bitboard(b);
-	//if(aggressor == WP || aggressor == BP) return 100;
-	if (aggressor != NONE) {
-		//int prize = (Get_Cp_Value(victim) < Get_Cp_Value(aggressor));
-		//if(prize < 0) return prize;
 
+	if (aggressor != NONE) {
 		// THIS NEEDS TO BE CHECKED
 		// We have to check if this is an en passant move here
 		Position posit(position);
