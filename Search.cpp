@@ -44,11 +44,7 @@ Move Search::Think(int wtime, int btime, int winc, int binc, int Maxdepth) {
 
 		if (q == 1) {
 			pos.Current_Turn ? Generate_White_Moves(false, pos) : Generate_Black_Moves(false, pos);
-			if (pos.numlegalmoves == 1) {
-				return pos.LegalMoves[0];
-			}
-		}
-		if (q == 1) {
+
 			TTEntry* tt = TT.probe(Get_Current_Hash_Key(&pos));
 			for (int h = 0; h < pos.numlegalmoves; h++) {
 				rootstack.push_back(pos.LegalMoves[h]);
